@@ -90,9 +90,13 @@ try:
         try:
             fields = line.split()
             dists = np.array(map(lambda x: int(x, 16) / 1000.0, fields[2:5]))
-            if any(dists == 0):
-                print("Skipping because of zero: ", dists)
-                continue
+            for i in range(len(dists)):
+                if dists[i] == 0:
+                    dist_circles[i].set_color('r')
+                    print("Skipping because of zero: ", dists)
+                    continue
+                else:
+                    dist_circles[i].set_color(None)
         except ValueError:
             continue
 
