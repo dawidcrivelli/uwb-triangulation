@@ -40,7 +40,6 @@ if 'map-ok' not in data:
 
     extents = [-x0, image.shape[1] / scale - x0, -y0, image.shape[0] / scale - y0]
     data['extents'] = extents
-
     data['map-ok'] = True
 
 print('Map data read')
@@ -49,9 +48,12 @@ plt.plot(0, 0, '+')
 
 if 'points' not in data:
     N = easygui.integerbox("Number of points", default=3)
-    points = plt.ginput(N)
+    points = np.array(plt.ginput(N))
+    points_3d = np.zeros((N, 3))
+    points_3d[:, :-1] = points
+    points_3d[:, 2] = [2.05, 2.05, 2.25]
 
-    data['points'] = np.array(points)
+    data['points'] = points_3d
 
 print('Points loaded')
 points = data['points']
@@ -71,7 +73,7 @@ print('Opening up serial connection to', port)
 connection = serial.Serial(port=port, baudrate=115200, timeout=10)
 
 position = np.tile(points.mean(axis=0), [10, 1])
-current_point, = plt.plot(position[:, 0], position[:, 1], 's')
+current_point, = plt.plot(position[-1, 0], position[-1, 1], 's')
 ellipse = patches.Ellipse(points.mean(axis=0), 1, 1, alpha=0.3, color='r')
 plt.gca().add_patch(ellipse)
 
@@ -103,16 +105,15 @@ try:
             plt.pause(0.01)
             continue
         results = triangulate(dists, points, position[-1, :])
-        (xp, yp) = results.x
         loc_error = np.abs(results.fun).mean()
         # print(results)
 
         position[:-1,:] = position[1:,:]
-        position[-1,:] = (xp, yp)
+        position[-1,:] = results.x
         print("New position", results.x, "from distances", dists)
 
         mean_pos = position.mean(axis=0)
-        stderr = 2 * position.std(axis=0)
+        stderr = 2 * position.std(axis=0) + 0.2
         ellipse.center = mean_pos
         ellipse.width = stderr[0]
         ellipse.height = stderr[1]
@@ -121,7 +122,8 @@ try:
         for i in range(len(points)):
             dist_circles[i].set_radius(dists[i])
 
-        current_point.set_data(position[:, 0], position[:, 1])
+        current_point.set_data(position[-1, 0], position[-1, 1])
+
         plt.pause(0.01)
 except KeyboardInterrupt:
     print("Finishing.")
