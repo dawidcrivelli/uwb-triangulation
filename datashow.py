@@ -14,7 +14,7 @@ from triangulate import triangulate
 from time import sleep
 
 plt.ion()
-
+plt.close()
 
 #%%
 data = shelve.open("storage.pkl", writeback=True)
@@ -92,14 +92,16 @@ try:
             dists = np.array(map(lambda x: int(x, 16) / 1000.0, fields[2:5]))
             for i in range(len(dists)):
                 if dists[i] == 0:
-                    dist_circles[i].set_color('r')
-                    print("Skipping because of zero: ", dists)
-                    continue
+                    dist_circles[i].set_fill('r')
                 else:
-                    dist_circles[i].set_color(None)
+                    dist_circles[i].set_fill(None)
         except ValueError:
             continue
 
+        if any(dists == 0):
+            print("Skipping because of zero: ", dists)
+            plt.pause(0.01)
+            continue
         results = triangulate(dists, points, position[-1, :])
         (xp, yp) = results.x
         loc_error = np.abs(results.fun).mean()
