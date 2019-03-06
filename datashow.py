@@ -90,7 +90,7 @@ try:
         try:
             fields = line.split()
             dists = np.array(map(lambda x: int(x, 16) / 1000.0, fields[2:5]))
-            if any(dist == 0):
+            if any(dists == 0):
                 print("Skipping because of zero: ", dists)
                 continue
         except ValueError:
