@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.patches as patches
+import argparse
 import numpy as np
 import shelve
 import easygui
@@ -12,14 +13,38 @@ from serial.tools import list_ports
 from itertools import cycle
 from triangulate import triangulate
 from time import sleep, time
+from influxdb import InfluxDBClient
+
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 plt.ion()
 plt.close()
 USE_3d = False
-#%%
+
+def parse_args():
+    """Parse the args."""
+    parser = argparse.ArgumentParser(
+        description='Parse lines and insert them into InfluxDB')
+    parser.add_argument('--host', type=str, required=False,
+                        default='localhost',
+                        help='hostname of InfluxDB http API')
+    parser.add_argument('--port', type=int, required=False, default=8086,
+                        help='port of InfluxDB http API')
+    parser.add_argument('--database', type=str, default='telemetry')
+    parser.add_argument('--sourceId', type=str, required=True,
+                        help="Name of the tagging field, required")
+    parser.add_argument('--extra', type=str, default=None,
+                        help="JSON to add as fields")
+    parser.add_argument('--points', action='store_true')
+    parser.add_argument('--map', action='store_true')
+    return parser.parse_args()
+
+args = parse_args()
+
 data = shelve.open("storage.pkl", writeback=True)
 
-if 'map-ok' not in data:
+if 'map-ok' not in data or args.map:
     filename = easygui.fileopenbox("Filename to map")
     image = mpimg.imread(filename).mean(axis=2)
 
@@ -46,7 +71,7 @@ print('Map data read')
 plt.imshow(data['map'], extent=data['extents'], cmap='binary_r')
 plt.plot(0, 0, '+')
 
-if 'points' not in data:
+if 'points' not in data or args.points:
     N = easygui.integerbox("Number of points", default=3)
     points = np.array(plt.ginput(N))
 
@@ -86,7 +111,16 @@ for p in points:
     dist_circles.append(c)
     plt.gca().add_patch(c)
 
+
 np.set_printoptions(formatter={'float': lambda f: '%5.02f' % f})
+
+
+client = InfluxDBClient(args.host, args.port)
+client.create_database(args.database)
+client.switch_database(args.database)
+# client.create_retention_policy('stream_rp', '52w', 1, default=True)
+tags = {'sourceId': args.sourceId}
+
 try:
     while True:
         line = connection.readline()
@@ -122,6 +156,14 @@ try:
         ellipse.width = stderr[0]
         ellipse.height = stderr[1]
         # print("Error circle", ellipse.center, stderr)
+
+        try:
+            contents = {'x': results.x[0], 'y': results.x[1], 'dist1': dists[0],
+                        'dist2': dists[1], 'dist3': dists[2]}
+            point = [{'measurement': 'telemetry', 'fields': contents, 'tags': tags}]
+            client.write_points(point)
+        except Exception as e:
+            print("Malformed line:", line, "Error:", e)
 
         for i in range(len(points)):
             dist_circles[i].set_radius(dists[i])
