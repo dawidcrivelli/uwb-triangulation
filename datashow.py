@@ -11,11 +11,11 @@ import serial
 from serial.tools import list_ports
 from itertools import cycle
 from triangulate import triangulate
-from time import sleep
+from time import sleep, time
 
 plt.ion()
 plt.close()
-
+USE_3d = False
 #%%
 data = shelve.open("storage.pkl", writeback=True)
 
@@ -49,11 +49,14 @@ plt.plot(0, 0, '+')
 if 'points' not in data:
     N = easygui.integerbox("Number of points", default=3)
     points = np.array(plt.ginput(N))
-    points_3d = np.zeros((N, 3))
-    points_3d[:, :-1] = points
-    points_3d[:, 2] = [2.05, 2.05, 2.25]
 
-    data['points'] = points_3d
+    if USE_3d:
+        points_3d = np.zeros((N, 3))
+        points_3d[:, :-1] = points
+        points_3d[:, 2] = [2.05, 2.05, 2.25]
+        points = points_3d
+
+    data['points'] = points
 
 print('Points loaded')
 points = data['points']
@@ -83,6 +86,7 @@ for p in points:
     dist_circles.append(c)
     plt.gca().add_patch(c)
 
+np.set_printoptions(formatter={'float': lambda f: '%5.02f' % f})
 try:
     while True:
         line = connection.readline()
@@ -110,14 +114,14 @@ try:
 
         position[:-1,:] = position[1:,:]
         position[-1,:] = results.x
-        print("New position", results.x, "from distances", dists)
+        print("{:<.02f}".format(time()), "position:", results.x, "from distance:", dists)
 
         mean_pos = position.mean(axis=0)
         stderr = 2 * position.std(axis=0) + 0.2
         ellipse.center = mean_pos
         ellipse.width = stderr[0]
         ellipse.height = stderr[1]
-        print("Error circle", ellipse.center, stderr)
+        # print("Error circle", ellipse.center, stderr)
 
         for i in range(len(points)):
             dist_circles[i].set_radius(dists[i])
