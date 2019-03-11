@@ -14,6 +14,7 @@ from itertools import cycle
 from triangulate import triangulate
 from time import sleep, time
 from influxdb import InfluxDBClient
+from map_lateration import elliptic_coords
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -37,6 +38,7 @@ def parse_args():
     parser.add_argument('--extra', type=str, default=None,
                         help="JSON to add as fields")
     parser.add_argument('--points', action='store_true')
+    parser.add_argument('--geo', action='store_true')
     parser.add_argument('--map', action='store_true')
     return parser.parse_args()
 
@@ -71,6 +73,19 @@ print('Map data read')
 plt.imshow(data['map'], extent=data['extents'], cmap='binary_r')
 plt.plot(0, 0, '+')
 
+if args.geo:
+    points = np.array(plt.ginput(2))
+    coords = [np.array(map(float, easygui.enterbox("Enter LAT,LNG coords for point").split(","))) for i in range(3)]
+
+    v1 = elliptic_coords(coords[1] - coords[0]) / points[0,1]
+    v2 = elliptic_coords(coords[2] - coords[0]) / points[1,0]
+
+    matrix = np.vstack((v1, v2)).T
+
+    data['geocoords'] = coords
+    data['matrix'] = matrix
+
+
 if 'points' not in data or args.points:
     N = easygui.integerbox("Number of points", default=3)
     points = np.array(plt.ginput(N))
@@ -83,12 +98,18 @@ if 'points' not in data or args.points:
 
     data['points'] = points
 
+
 print('Points loaded')
 points = data['points']
 for i, p in enumerate(points):
     x, y = p[0], p[1]
     plt.plot(x, y, 'o')
     plt.text(x, y + 0.1, 'A{}'.format(i))
+    if data.has_key('matrix'):
+        zero = data['geocoords'][0]
+        latlng_diff = np.dot(data['matrix'], p)
+        latlng_coords = zero + latlng_diff
+        print("Point", i, "XY", p, "GEO", latlng_coords)
 
 plt.show()
 plt.pause(0.01)
