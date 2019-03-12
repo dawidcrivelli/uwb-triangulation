@@ -14,7 +14,6 @@ from itertools import cycle
 from triangulate import triangulate
 from time import sleep, time
 from influxdb import InfluxDBClient
-from map_lateration import elliptic_coords
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -40,6 +39,7 @@ def parse_args():
     parser.add_argument('--points', action='store_true')
     parser.add_argument('--geo', action='store_true')
     parser.add_argument('--map', action='store_true')
+    parser.add_argument('--no_serial', action='store_true')
     return parser.parse_args()
 
 args = parse_args()
@@ -72,23 +72,58 @@ if 'map-ok' not in data or args.map:
 print('Map data read')
 plt.imshow(data['map'], extent=data['extents'], cmap='binary_r')
 plt.plot(0, 0, '+')
+plt.show()
+plt.pause(1)
 
-if args.geo:
-    points = np.array(plt.ginput(2))
-    coords = [np.array(map(float, easygui.enterbox("Enter LAT,LNG coords for point").split(","))) for i in range(3)]
+if not data.has_key('geocoords') or args.geo:
+    zero = np.array(map(float, easygui.enterbox(
+        "Enter LAT,LNG coords for zero").split(",")))
+    data['zerocoords'] = zero
 
-    v1 = elliptic_coords(coords[1] - coords[0]) / points[0,1]
-    v2 = elliptic_coords(coords[2] - coords[0]) / points[1,0]
+    print("Select X coordinate point")
+    X = np.array(plt.ginput(1)).ravel()
+    X[np.abs(X) < 0.1] = 0
+    Xvec = np.array(map(float, easygui.enterbox(
+        "Enter LAT,LNG coords for point X").split(",")))
 
-    matrix = np.vstack((v1, v2)).T
+    print("Select Y coordinate point")
+    Y = np.array(plt.ginput(1)).ravel()
+    Y[np.abs(Y) < 0.1] = 0
+    Yvec = np.array(map(float, easygui.enterbox(
+        "Enter LAT,LNG coords for point Y").split(",")))
 
-    data['geocoords'] = coords
+    data['geocoords'] = (Xvec, Yvec)
+
+    x = (Xvec - zero)  / np.sqrt(X.dot(X))
+    y = (Yvec - zero) / np.sqrt(Y.dot(Y))
+
+    matrix = np.vstack((x, y)).T
+
     data['matrix'] = matrix
+    data.sync()
 
 
 if 'points' not in data or args.points:
     N = easygui.integerbox("Number of points", default=3)
-    points = np.array(plt.ginput(N))
+    points = []
+    geopoints = []
+    for i in range(N):
+        print("Enter point", i+1)
+        p = np.array(plt.ginput(n=1, timeout=-1)).ravel()
+        if data.has_key('matrix'):
+            zero = data['zerocoords']
+            latlng_diff = np.dot(data['matrix'], p)
+            latlng_coords = zero + latlng_diff
+            print("Point", i, "XY", p, "GEO", latlng_coords)
+            geopoints.append(latlng_coords)
+        points.append(p)
+        data['points'] = points
+        data['geopoints'] = geopoints
+        data.sync()
+        plt.show()
+        plt.pause(0.01)
+    data['points'] = np.array(points)
+    data['geopoints'] = np.array(geopoints)
 
     if USE_3d:
         points_3d = np.zeros((N, 3))
@@ -96,24 +131,22 @@ if 'points' not in data or args.points:
         points_3d[:, 2] = [2.05, 2.05, 2.25]
         points = points_3d
 
-    data['points'] = points
-
 
 print('Points loaded')
 points = data['points']
+geopoints = data['geopoints']
 for i, p in enumerate(points):
     x, y = p[0], p[1]
     plt.plot(x, y, 'o')
     plt.text(x, y + 0.1, 'A{}'.format(i))
-    if data.has_key('matrix'):
-        zero = data['geocoords'][0]
-        latlng_diff = np.dot(data['matrix'], p)
-        latlng_coords = zero + latlng_diff
-        print("Point", i, "XY", p, "GEO", latlng_coords)
+    print("Point", i+1, "XY", p, "GEO", geopoints[i])
 
 plt.show()
-plt.pause(0.01)
+plt.pause(1)
 data.close()
+
+if args.no_serial:
+    raise SystemExit(0)
 
 port = (p.device for p in serial.tools.list_ports.comports()
         if 'STM32' in str(p)).next()
