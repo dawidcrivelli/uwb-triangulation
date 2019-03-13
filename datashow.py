@@ -60,7 +60,8 @@ if 'map-ok' not in data or args.map:
 
     plt.imshow(data['map'], extent=extents, cmap='binary_r')
     print('Click to set coordinate zero')
-    ((x0, y0),) = plt.ginput()
+    # ((x0, y0),) = plt.ginput()
+    (x0, y0) = (155.0 / scale, 192.0 / scale)
 
     data['zero'] = (x0, y0)
     plt.close()
@@ -81,21 +82,26 @@ if not data.has_key('geocoords') or args.geo:
     data['zerocoords'] = zero
 
     print("Select X coordinate point")
-    X = np.array(plt.ginput(1)).ravel()
+    # X = np.array(plt.ginput(1)).ravel()
+    X = np.array([33.66, 0])
     X[np.abs(X) < 0.1] = 0
     Xvec = np.array(map(float, easygui.enterbox(
         "Enter LAT,LNG coords for point X").split(",")))
 
-    print("Select Y coordinate point")
-    Y = np.array(plt.ginput(1)).ravel()
-    Y[np.abs(Y) < 0.1] = 0
-    Yvec = np.array(map(float, easygui.enterbox(
-        "Enter LAT,LNG coords for point Y").split(",")))
+    print("Select XY coordinate point")
+    # XY = np.array(plt.ginput(1)).ravel()
+    XY = np.array([33.66, 15.66])
+    # XY[np.abs(XY) < 0.1] = 0
+    XYvec = np.array(map(float, easygui.enterbox(
+        "Enter LAT,LNG coords for point XY").split(",")))
 
-    data['geocoords'] = (Xvec, Yvec)
+    Y = XY - X
+    Yvec = XYvec - Xvec
+
+    data['geocoords'] = (((0,0), zero), (X, Xvec), (XY, XYvec))
 
     x = (Xvec - zero)  / np.sqrt(X.dot(X))
-    y = (Yvec - zero) / np.sqrt(Y.dot(Y))
+    y = (Yvec) / np.sqrt(Y.dot(Y))
 
     matrix = np.vstack((x, y)).T
 
@@ -110,20 +116,11 @@ if 'points' not in data or args.points:
     for i in range(N):
         print("Enter point", i+1)
         p = np.array(plt.ginput(n=1, timeout=-1)).ravel()
-        if data.has_key('matrix'):
-            zero = data['zerocoords']
-            latlng_diff = np.dot(data['matrix'], p)
-            latlng_coords = zero + latlng_diff
-            print("Point", i, "XY", p, "GEO", latlng_coords)
-            geopoints.append(latlng_coords)
         points.append(p)
-        data['points'] = points
-        data['geopoints'] = geopoints
-        data.sync()
         plt.show()
         plt.pause(0.01)
     data['points'] = np.array(points)
-    data['geopoints'] = np.array(geopoints)
+    data.sync()
 
     if USE_3d:
         points_3d = np.zeros((N, 3))
@@ -134,13 +131,21 @@ if 'points' not in data or args.points:
 
 print('Points loaded')
 points = data['points']
-geopoints = data['geopoints']
+geopoints = []
 for i, p in enumerate(points):
     x, y = p[0], p[1]
     plt.plot(x, y, 'o')
     plt.text(x, y + 0.1, 'A{}'.format(i))
-    print("Point", i+1, "XY", p, "GEO", geopoints[i])
-
+    if data.has_key('matrix'):
+        zero = data['zerocoords']
+        latlng_diff = np.dot(data['matrix'], p)
+        latlng_coords = zero + latlng_diff
+        print("Point", i+1, "XY", p, "GEO", latlng_coords)
+        geopoints.append(latlng_coords)
+data['geopoints'] = np.array(geopoints)
+for ((x,y), label) in data['geocoords']:
+    plt.plot(x, y, 'x')
+    plt.text(x, y+0.2, str(label))
 plt.show()
 plt.pause(1)
 data.close()
