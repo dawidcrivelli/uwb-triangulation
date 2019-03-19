@@ -9,6 +9,10 @@ import numpy as np
 import shelve
 import easygui
 import serial
+import json
+from shapely.geometry import Point, Polygon
+
+from scipy.linalg import solve
 from serial.tools import list_ports
 from itertools import cycle
 from triangulate import triangulate
@@ -21,6 +25,47 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 plt.ion()
 plt.close()
 USE_3d = False
+
+
+def xy_to_latlng(data, p):
+    zero = data['zerocoords']
+    matrix = data['matrix']
+
+    latlng_diff = np.dot(matrix, p)
+    latlng_coords = zero + latlng_diff
+    return latlng_coords
+
+
+def latlng_to_xy(data, latlng_coords):
+    zero = data['zerocoords']
+    matrix = data['matrix']
+
+    latlng_diff = latlng_coords - zero
+    xy = solve(matrix, latlng_diff)
+    return xy
+
+
+def find_area(p, polygons):
+    pp = Point(p)
+    where = None
+    for name, poly in polygons.iteritems():
+        if pp.within(poly):
+            where = name
+            break
+    return where
+
+def color_area(p, polygons, coloredareas, label=""):
+    where = find_area(p, polygons)
+
+    for area in coloredareas.itervalues():
+        area.set_facecolor([0., 0, 0.5, 0.1])
+
+    if where:
+        print("Point", label, "is within", where)
+        coloredareas[where].set_facecolor([0.8, 0, 0, 0.2])
+    else:
+        print("Zone is unknown!!!")
+
 
 def parse_args():
     """Parse the args."""
@@ -39,12 +84,16 @@ def parse_args():
     parser.add_argument('--points', action='store_true')
     parser.add_argument('--geo', action='store_true')
     parser.add_argument('--map', action='store_true')
+    parser.add_argument('--areas', action='store_true')
     parser.add_argument('--no_serial', action='store_true')
+    parser.add_argument('--fix-areas', action='store_true')
+    parser.add_argument('--no-write', action='store_true')
     return parser.parse_args()
 
 args = parse_args()
 
 data = shelve.open("storage.pkl", writeback=True)
+np.set_printoptions(formatter={'float': lambda f: '%5.06f' % f})
 
 if 'map-ok' not in data or args.map:
     filename = easygui.fileopenbox("Filename to map")
@@ -135,11 +184,9 @@ geopoints = []
 for i, p in enumerate(points):
     x, y = p[0], p[1]
     plt.plot(x, y, 'o')
-    plt.text(x, y + 0.1, 'A{}'.format(i))
+    plt.text(x, y + 0.1, 'A{}'.format(i+1))
     if data.has_key('matrix'):
-        zero = data['zerocoords']
-        latlng_diff = np.dot(data['matrix'], p)
-        latlng_coords = zero + latlng_diff
+        latlng_coords = xy_to_latlng(data, p)
         print("Point", i+1, "XY", p, "GEO", latlng_coords)
         geopoints.append(latlng_coords)
 data['geopoints'] = np.array(geopoints)
@@ -148,6 +195,55 @@ for ((x,y), label) in data['geocoords']:
     plt.text(x, y+0.2, str(label))
 plt.show()
 plt.pause(1)
+
+
+if 'areas' not in data or args.areas:
+    areas = {}
+    for item in json.loads(open("areas.json").read()):
+        name, latlng_coords = item['name'], item['coordinates']
+        xycoords = np.array([latlng_to_xy(data, [c[1], c[0]]) for c in latlng_coords])
+        print(name, latlng_coords, xycoords)
+
+        areas[name] = xycoords
+    data['areas'] = areas
+
+areas = data['areas']
+polygons = {}
+coloredareas = {}
+ax  = plt.gca()
+for (name, coords) in areas.iteritems():
+    p = patches.Polygon(coords, edgecolor=[0.5, 0.5, 0.5], facecolor=[0, 0, 0.5, 0.1])
+    ax.add_patch(p)
+    coloredareas[name] = p
+    polygons[name] = Polygon(coords)
+    x, y = coords.mean(axis=0)
+    plt.text(x, y, str(name))
+    latlng_coords = np.array([xy_to_latlng(data, p) for p in coords])
+    plt.show()
+    plt.pause(0.1)
+
+    change = easygui.ynbox("Want to change it?") if args.fix_areas else False
+    if change:
+        coords = np.array(plt.ginput(4))
+        areas[name] = coords
+        p.remove()
+        p = patches.Polygon(coords, edgecolor=[0.5, 0.5, 0.5], facecolor=[0, 0, 0.5, 0.1])
+        ax.add_patch(p)
+        coloredareas[name] = p
+        polygons[name] = Polygon(coords)
+        plt.show()
+        plt.pause(1.0)
+
+    print("Area ", name, ", coords XY: ", (coords), ", latlng: ", (latlng_coords))
+    data['areas'] = areas
+    data.sync()
+
+
+for i, p in enumerate(points):
+    color_area(p, polygons, coloredareas, label="A{}".format(i + 1))
+    plt.pause(0.2)
+color_area([-10, -10], polygons, coloredareas)
+
 data.close()
 
 if args.no_serial:
@@ -158,6 +254,7 @@ port = (p.device for p in serial.tools.list_ports.comports()
 
 print('Opening up serial connection to', port)
 connection = serial.Serial(port=port, baudrate=115200, timeout=10)
+np.set_printoptions(formatter={'float': lambda f: '%5.02f' % f})
 
 position = np.tile(points.mean(axis=0), [10, 1])
 current_point, = plt.plot(position[-1, 0], position[-1, 1], 's')
@@ -168,10 +265,7 @@ dist_circles = []
 for p in points:
     c = patches.Circle(p, 1, fill=None, alpha=0.4)
     dist_circles.append(c)
-    plt.gca().add_patch(c)
-
-
-np.set_printoptions(formatter={'float': lambda f: '%5.02f' % f})
+    ax.add_patch(c)
 
 
 client = InfluxDBClient(args.host, args.port)
@@ -201,26 +295,30 @@ try:
             print("Skipping because of zero: ", dists)
             plt.pause(0.01)
             continue
-        results = triangulate(dists, points, position[-1, :])
+        results = triangulate(dists, points, position[-1,:])
+        X = results.x
+        color_area(X, polygons, coloredareas)
         loc_error = np.abs(results.fun).mean()
         # print(results)
 
         position[:-1,:] = position[1:,:]
-        position[-1,:] = results.x
-        print("{:<.02f}".format(time()), "position:", results.x, "from distance:", dists)
+        position[-1,:] = X
+        print("{:<.02f}".format(time()), "position:", X, "from distance:", dists)
 
         mean_pos = position.mean(axis=0)
         stderr = 2 * position.std(axis=0) + 0.2
         ellipse.center = mean_pos
         ellipse.width = stderr[0]
         ellipse.height = stderr[1]
+        color_area(X, polygons, coloredareas)
         # print("Error circle", ellipse.center, stderr)
 
         try:
-            contents = {'x': results.x[0], 'y': results.x[1], 'dist1': dists[0],
+            contents = {'x': X[0], 'y': X[1], 'dist1': dists[0],
                         'dist2': dists[1], 'dist3': dists[2]}
-            point = [{'measurement': 'telemetry', 'fields': contents, 'tags': tags}]
-            client.write_points(point)
+            point = [{'measurement': 'uwb', 'fields': contents, 'tags': tags}]
+            if not args.no_write:
+                client.write_points(point)
         except Exception as e:
             print("Malformed line:", line, "Error:", e)
 
