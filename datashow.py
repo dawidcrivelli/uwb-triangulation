@@ -297,6 +297,7 @@ try:
             continue
         results = triangulate(dists, points, position[-1,:])
         X = results.x
+        zone = find_area(X, polygons)
         color_area(X, polygons, coloredareas)
         loc_error = np.abs(results.fun).mean()
         # print(results)
@@ -315,7 +316,7 @@ try:
 
         try:
             contents = {'x': X[0], 'y': X[1], 'dist1': dists[0],
-                        'dist2': dists[1], 'dist3': dists[2]}
+                        'dist2': dists[1], 'dist3': dists[2], 'zone': zone}
             point = [{'measurement': 'uwb', 'fields': contents, 'tags': tags}]
             if not args.no_write:
                 client.write_points(point)
