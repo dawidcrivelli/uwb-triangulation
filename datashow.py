@@ -61,7 +61,7 @@ def color_area(p, polygons, coloredareas, label=""):
         area.set_facecolor([0., 0, 0.5, 0.1])
 
     if where:
-        print("Point", label, "is within", where)
+        print(label, ",", where)
         coloredareas[where].set_facecolor([0.8, 0, 0, 0.2])
     else:
         print("Zone is unknown!!!")
@@ -297,6 +297,7 @@ try:
             continue
         results = triangulate(dists, points, position[-1,:])
         X = results.x
+        X = [np.clip(X[0], 1.0, 33.0), np.clip(X[1], 1.0, 15.0)]
         zone = find_area(X, polygons)
         color_area(X, polygons, coloredareas)
         loc_error = np.abs(results.fun).mean()
