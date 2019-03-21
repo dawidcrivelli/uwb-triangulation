@@ -122,6 +122,7 @@ if 'map-ok' not in data or args.map:
 print('Map data read')
 plt.imshow(data['map'], extent=data['extents'], cmap='binary_r')
 plt.plot(0, 0, '+')
+plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
 plt.show()
 plt.pause(1)
 
@@ -218,7 +219,7 @@ for (name, coords) in areas.iteritems():
     polygons[name] = Polygon(coords)
     x, y = coords.mean(axis=0)
     plt.text(x, y, str(name))
-    latlng_coords = np.array([xy_to_latlng(data, p) for p in coords])
+    latlng_coords = np.array([xy_to_latlng(data, point) for point in coords])
     plt.show()
     plt.pause(0.1)
 
