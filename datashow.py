@@ -73,7 +73,7 @@ def setup_logging(name, level='WARNING', logfile=False, logfile_suffix='_log'):
     logging.basicConfig(
         level=level, format='[%(asctime)s] %(levelname)s \t %(message)s', datefmt='%H:%M:%S')
     root_logger = logging.getLogger(name)
-    root_logger.setLevel(logging.ERROR)
+    root_logger.setLevel(logging.INFO)
 
     if logfile:
         fh = logging.FileHandler("{}_{}.log".format(
@@ -208,7 +208,7 @@ for i, p in enumerate(points):
     plt.text(x, y + 0.1, 'A{}'.format(i+1))
     if data.has_key('matrix'):
         latlng_coords = xy_to_latlng(data, p)
-        print("Point", i+1, "XY", p, "GEO", latlng_coords)
+        log.info("Point {}, XY {}, GEO {}".format(i+1, p, latlng_coords))
         geopoints.append(latlng_coords)
 data['geopoints'] = np.array(geopoints)
 for ((x,y), label) in data['geocoords']:
@@ -255,7 +255,7 @@ for (name, coords) in areas.iteritems():
         plt.show()
         plt.pause(1.0)
 
-    print("Area ", name, ", coords XY: ", (coords), ", latlng: ", (latlng_coords))
+    log.info("Area {}, coords XY: {}, latlng: {}".format(name, coords, latlng_coords))
     data['areas'] = areas
     data.sync()
 
