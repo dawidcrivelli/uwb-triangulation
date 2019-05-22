@@ -5,13 +5,15 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.patches as patches
 import argparse
+import logging
+
 import numpy as np
 import shelve
 import easygui
 import serial
 import json
 from shapely.geometry import Point, Polygon
-
+from datetime import date
 from scipy.linalg import solve
 from serial.tools import list_ports
 from itertools import cycle
@@ -67,16 +69,33 @@ def color_area(p, polygons, coloredareas, label=""):
         print("Zone is unknown!!!")
 
 
+def setup_logging(name, level='WARNING', logfile=False, logfile_suffix='_log'):
+    logging.basicConfig(
+        level=level, format='[%(asctime)s] %(levelname)s \t %(message)s', datefmt='%H:%M:%S')
+    root_logger = logging.getLogger(name)
+    root_logger.setLevel(logging.ERROR)
+
+    if logfile:
+        fh = logging.FileHandler("{}_{}.log".format(
+            name + logfile_suffix, date.today().isoformat()))
+        fh.setFormatter(logging.Formatter(
+            '[%(asctime)s] %(name)s  %(levelname)s  %(message)s'))
+        log = logging.getLogger()
+        fh.setLevel(logging.INFO)
+        log.addHandler(fh)
+
+    return root_logger
+
 def parse_args():
     """Parse the args."""
     parser = argparse.ArgumentParser(
         description='Parse lines and insert them into InfluxDB')
     parser.add_argument('--host', type=str, required=False,
-                        default='localhost',
+                        default='rnd.local',
                         help='hostname of InfluxDB http API')
     parser.add_argument('--port', type=int, required=False, default=8086,
                         help='port of InfluxDB http API')
-    parser.add_argument('--database', type=str, default='telemetry')
+    parser.add_argument('--database', type=str, default='dcrivelli')
     parser.add_argument('--sourceId', type=str, required=True,
                         help="Name of the tagging field, required")
     parser.add_argument('--extra', type=str, default=None,
@@ -91,6 +110,7 @@ def parse_args():
     return parser.parse_args()
 
 args = parse_args()
+log = setup_logging('uwb', logfile='uwb_measurements')
 
 data = shelve.open("storage.pkl", writeback=True)
 np.set_printoptions(formatter={'float': lambda f: '%5.06f' % f})
@@ -270,7 +290,7 @@ for p in points:
 
 
 client = InfluxDBClient(args.host, args.port)
-client.create_database(args.database)
+# client.create_database(args.database)
 client.switch_database(args.database)
 # client.create_retention_policy('stream_rp', '52w', 1, default=True)
 tags = {'sourceId': args.sourceId}
@@ -319,9 +339,10 @@ try:
         try:
             contents = {'x': X[0], 'y': X[1], 'dist1': dists[0],
                         'dist2': dists[1], 'dist3': dists[2], 'zone': zone}
+            log.info(json.dumps(contents))
             point = [{'measurement': 'uwb', 'fields': contents, 'tags': tags}]
             if not args.no_write:
-                client.write_points(point)
+                client.write_points(point, retention_policy='history')
         except Exception as e:
             print("Malformed line:", line, "Error:", e)
 
