@@ -2,3 +2,4 @@ matplotlib
 numpy
 easygui
 pyserial
+shapely
