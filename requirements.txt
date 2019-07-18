@@ -3,3 +3,4 @@ numpy
 easygui
 pyserial
 shapely
+influxdb

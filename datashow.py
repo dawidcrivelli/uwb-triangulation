@@ -9,7 +9,6 @@ import logging
 
 import numpy as np
 import shelve
-import easygui
 import serial
 import json
 from shapely.geometry import Point, Polygon
@@ -96,6 +95,8 @@ def parse_args():
     parser.add_argument('--port', type=int, required=False, default=8086,
                         help='port of InfluxDB http API')
     parser.add_argument('--database', type=str, default='dcrivelli')
+    parser.add_argument('--rp', type=str, default='stream_rp')
+    parser.add_argument('--measurement', type=str, default='uwb')
     parser.add_argument('--sourceId', type=str, required=True,
                         help="Name of the tagging field, required")
     parser.add_argument('--extra', type=str, default=None,
@@ -293,7 +294,7 @@ client = InfluxDBClient(args.host, args.port)
 # client.create_database(args.database)
 client.switch_database(args.database)
 # client.create_retention_policy('stream_rp', '52w', 1, default=True)
-tags = {'sourceId': args.sourceId}
+tags = {'sourceId': args.sourceId, 'trackingId': args.sourceId}
 
 try:
     while True:
@@ -337,12 +338,12 @@ try:
         # print("Error circle", ellipse.center, stderr)
 
         try:
-            contents = {'x': X[0], 'y': X[1], 'dist1': dists[0],
+            contents = {'x': X[0], 'y': X[1], 'error': 0.1, 'dist1': dists[0],
                         'dist2': dists[1], 'dist3': dists[2], 'zone': zone}
             log.info(json.dumps(contents))
-            point = [{'measurement': 'uwb', 'fields': contents, 'tags': tags}]
+            point = [{'measurement': args.measurement, 'fields': contents, 'tags': tags}]
             if not args.no_write:
-                client.write_points(point, retention_policy='history')
+                client.write_points(point, retention_policy=args.rp)
         except Exception as e:
             print("Malformed line:", line, "Error:", e)
 
