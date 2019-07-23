@@ -1,0 +1,218 @@
+[
+    {
+        "name": "locationGateway01",
+        "active": true,
+        "x": 31.60531,
+        "rssi": -69.3,
+        "id": "01",
+        "column": "gw01",
+        "y": 15.16
+    },
+    {
+        "name": "locationGateway02",
+        "active": true,
+        "x": 33.16,
+        "rssi": -64.21,
+        "id": "02",
+        "column": "gw02",
+        "y": 8.52762
+    },
+    {
+        "name": "locationGateway03",
+        "active": true,
+        "x": 30.36,
+        "rssi": -71.22,
+        "id": "03",
+        "column": "gw03",
+        "y": 3.16045
+    },
+    {
+        "name": "locationGateway04",
+        "active": true,
+        "x": 24.83856,
+        "rssi": -60.5,
+        "id": "04",
+        "column": "gw04",
+        "y": 0.5
+    },
+    {
+        "name": "locationGateway05",
+        "active": true,
+        "x": 18.79025,
+        "rssi": -64.99,
+        "id": "05",
+        "column": "gw05",
+        "y": 0.50026
+    },
+    {
+        "name": "locationGateway06",
+        "active": true,
+        "x": 12.83,
+        "rssi": -61.78,
+        "id": "06",
+        "column": "gw06",
+        "y": 3.10122
+    },
+    {
+        "name": "locationGateway07",
+        "active": true,
+        "x": 9.71518,
+        "rssi": -73.23,
+        "id": "07",
+        "column": "gw07",
+        "y": 3.17625
+    },
+    {
+        "name": "locationGateway08",
+        "active": true,
+        "x": 2.53,
+        "rssi": -74.01,
+        "id": "08",
+        "column": "gw08",
+        "y": 3.75545
+    },
+    {
+        "name": "locationGateway09",
+        "active": true,
+        "x": 6.34,
+        "rssi": -63.26,
+        "id": "09",
+        "column": "gw09",
+        "y": 10.0706
+    },
+    {
+        "name": "locationGateway10",
+        "active": true,
+        "x": 0.5,
+        "rssi": -67.57,
+        "id": "10",
+        "column": "gw10",
+        "y": 11.17232
+    },
+    {
+        "name": "locationGateway11",
+        "active": true,
+        "x": 6.18,
+        "rssi": -69.61,
+        "id": "11",
+        "column": "gw11",
+        "y": 12.85538
+    },
+    {
+        "name": "locationGateway12",
+        "active": true,
+        "x": 12.6105,
+        "rssi": -66.01,
+        "id": "12",
+        "column": "gw12",
+        "y": 15.16
+    },
+    {
+        "name": "locationGateway13",
+        "active": true,
+        "x": 19.24848,
+        "rssi": -66.03,
+        "id": "13",
+        "column": "gw13",
+        "y": 15.16
+    },
+    {
+        "name": "locationGateway14",
+        "active": true,
+        "x": 27.285,
+        "rssi": -68.89,
+        "id": "14",
+        "column": "gw14",
+        "y": 13.35453
+    },
+    {
+        "name": "locationGateway15",
+        "active": true,
+        "x": 28.85972,
+        "rssi": -78.13,
+        "id": "15",
+        "column": "gw15",
+        "y": 13.54905
+    },
+    {
+        "name": "locationGateway16",
+        "active": true,
+        "x": 25.20166,
+        "rssi": -69.46,
+        "id": "16",
+        "column": "gw16",
+        "y": 8.51662
+    },
+    {
+        "name": "locationGateway17",
+        "active": true,
+        "x": 18.41163,
+        "rssi": -61.7,
+        "id": "17",
+        "column": "gw17",
+        "y": 8.5
+    },
+    {
+        "name": "locationGateway18",
+        "active": true,
+        "x": 14.07075,
+        "rssi": -69.89,
+        "id": "18",
+        "column": "gw18",
+        "y": 8.56851
+    },
+    {
+        "name": "locationGateway19",
+        "active": true,
+        "x": 10.74204,
+        "rssi": -72.42,
+        "id": "19",
+        "column": "gw19",
+        "y": 8.49563
+    },
+    {
+        "name": "locationGateway30",
+        "active": true,
+        "x": 27.26,
+        "rssi": -67.5,
+        "id": "30",
+        "column": "gw30",
+        "y": 5.1
+    },
+    {
+        "name": "locationGateway31",
+        "active": true,
+        "x": 19.41163,
+        "rssi": -67.5,
+        "id": "31",
+        "column": "gw31",
+        "y": 7
+    },
+    {
+        "name": "locationGateway32",
+        "active": true,
+        "x": 1.25,
+        "rssi": -67.5,
+        "id": "32",
+        "column": "gw32",
+        "y": 15.16
+    },
+    {
+        "name": "locationGateway33",
+        "active": true,
+        "x": 11.44,
+        "rssi": -67.5,
+        "id": "33",
+        "column": "gw33",
+        "y": 12.8
+    },
+    {
+        "name": "locationGateway34",
+        "active": true,
+        "x": 23.285,
+        "rssi": -67.5,
+        "id": "34",
+        "column": "gw34",
+        "y": 12.06
+    }
+]
